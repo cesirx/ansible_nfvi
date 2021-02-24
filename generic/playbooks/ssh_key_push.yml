@@ -1,0 +1,21 @@
+---
+- hosts: "{{ variable_host | default('datacenter_a') }}"
+  name: Create SSH Key pair and push to remote host
+  gather_facts: False
+  
+  tasks:
+
+  - name: Generate an OpenSSH keypair with the default values (4096 bits, rsa) in Ansible Control node
+    delegate_to: localhost 
+    openssh_keypair:
+      path: ~/.ssh/id_rsa
+
+  # VMware ESXi stores authorized keys in a non standard directory
+  - name: Copy public ssh key from Ansible Control node to each ESXi authorized_hosts file
+    authorized_key:
+      user: "{{ ansible_ssh_user }}"
+      state: present
+      key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      path: /etc/ssh/keys-root/authorized_keys
+      manage_dir: False
+

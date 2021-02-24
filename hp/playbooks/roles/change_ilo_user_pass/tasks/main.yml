@@ -1,0 +1,9 @@
+---
+
+  - name: Create iLO users
+    command: sshpass -p {{ilo_login_password}} ssh {{ilo_login_user}}@{{ilo_ip}} "set /map1/accounts1/{{ ilo_username }} password={{ ilo_password }} group={{ privileges }}"
+    register: user_pass_change
+
+  - name: Print output
+    debug:
+      msg: "{{ user_pass_change.stdout }}"

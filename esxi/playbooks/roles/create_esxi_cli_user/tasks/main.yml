@@ -1,0 +1,29 @@
+---
+
+  - name: Check if esxi user exists
+    shell: esxcli system account list | grep "^{{ username | default(esxi_cli_username) }} " | cat
+    ignore_errors: yes
+    register: user_exists
+
+  - name: Create esxi user
+    command: esxcli system account add -i {{ username | default(esxi_cli_username) }} -p {{ esxi_cli_password }} -c {{ esxi_cli_password }}
+    when: user_exists.stdout == ""
+
+  - name: Set user permissions
+    command: esxcli system permission set -i {{ username | default(esxi_cli_username) }} -r Admin
+    when: user_exists.stdout == ""
+
+  - name: Register user permissions
+    shell: esxcli system permission list | grep {{ username | default(esxi_cli_username) }}
+    register: new_user
+    when: user_exists.stdout == ""
+
+  - name: New user summary
+    debug:
+      msg: "User {{ username | default(esxi_cli_username) }} successfully created."
+    when: user_exists.stdout == ""
+
+  - name: User already in host
+    debug:
+      msg: "User {{ username | default(esxi_cli_username) }} already exists."
+    when: user_exists.stdout != ""

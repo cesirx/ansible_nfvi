@@ -1,0 +1,85 @@
+---
+    ## Copy remote hosts ESXi, iLO and iDRAC ssh fingerprint to local konw_hosts file of Ansible Control host
+    ## Useful to avoid fingerprint warning interation upon first connection
+
+    - hosts: localhost
+      connection: local
+      gather_facts: False
+      
+      vars:
+        esxi_known_hosts: "{{ groups['all'] }}"
+        ilo_known_hosts: "{{ groups['datacenter_a_hp'] }}"
+        idrac_known_hosts: "{{ groups['datacenter_a_dell'] }}"
+
+      tasks:
+
+      #- debug:
+      #    msg: "{{hostvars[item]['ilo_ip']}}"
+      #  with_items: "{{ ilo_known_hosts }}"
+
+      #- debug:
+      #    msg: "{{hostvars[item]['idrac_ip']}}"
+      #  with_items: "{{ idrac_known_hosts }}"
+
+       
+      #- debug:
+      #    msg: "{{ esxi_known_hosts }}"
+
+      # Retrieve SSH key fingerprint from the ESXi of each remote host
+      - name: Get SSH fingerprint from the ESXi of each VMware host in our inventory
+        #command: "ssh-keyscan -t rsa {{ hostvars[item]['ansible_host'] }}"
+        command: "ssh-keyscan -t rsa {{ item }}"
+        with_items: "{{ esxi_known_hosts }}"
+        register: fingerprint_esxi
+        tags:
+          - esxi
+
+      # Retrieve SSH key fingerprint from the iLO of each remote HP host
+      - name: Get SSH fingerprint from the iLO of each HP host in our inventory
+        command: "ssh-keyscan -t rsa {{ hostvars[item]['ilo_ip'] }}"
+        with_items: "{{ ilo_known_hosts }}"
+        register: fingerprint_ilo
+        tags:
+          - ilo
+    
+      # Retrieve SSH key fingerprint from the iDRAC of each remote Dell host
+      - name: Get SSH fingerprint from the iDRAC of each Dell host in our inventory
+        command: "ssh-keyscan -t rsa {{hostvars[item]['idrac_ip']}}"
+        with_items: "{{ idrac_known_hosts }}"
+        register: fingerprint_idrac
+        tags:
+          - idrac
+
+      - name: Add/update host fingerprint to known_hosts file
+        known_hosts:
+          #name: "{{ item.stdout | regex_search('^[0-9.]+') }}"
+          name: "{{ item.cmd[-1] }}"
+          key: "{{ item.stdout }}"
+          state: present
+        with_items:
+          - "{{ fingerprint_esxi.results }}" 
+          - "{{ fingerprint_ilo.results }}"
+          - "{{ fingerprint_idrac.results }}"
+        when: item.stdout != ''
+        loop_control:
+          label: "{{ item.cmd[-1] }}"
+        tags:
+          - esxi
+          - ilo
+          - idrac
+
+      - name: Connection failures
+        debug:
+          msg: "There was a connection error with the following device: {{ item.cmd[-1] }}"
+        with_items: 
+          - "{{ fingerprint_esxi.results|flatten(levels=1) }}"
+          - "{{ fingerprint_ilo.results|flatten(levels=1) }}"
+          - "{{ fingerprint_idrac.results|flatten(levels=1) }}"
+        when: item.stdout == ''
+        loop_control:
+          label: "{{ item.cmd[-1] }}"
+        tags:
+          - esxi
+          - ilo
+          - idrac
+ 

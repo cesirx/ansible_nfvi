@@ -1,0 +1,10 @@
+---
+
+  - name: Display non-system esxi users
+    shell: esxcli system account list | grep -v 'dcui\|root\|vpxuser'
+    register: user_list
+
+  - name: Print user list
+    debug:
+      msg: "{{ user_list.stdout_lines }}"
+      

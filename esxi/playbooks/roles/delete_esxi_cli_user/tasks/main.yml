@@ -1,0 +1,16 @@
+---
+
+  - name: Delete esxi users
+    shell: esxcli system account remove -i {{ username | default(esxi_cli_username) }}
+    register: user_delete
+    #ignore_errors: yes
+
+  #- name: Print failed delete ouput
+  #  debug:
+  #    msg: "{{ user_delete.stdout_lines }}"
+  #  when: user_delete.rc != 0
+
+  - name: Print success delete ouput
+    debug:
+      msg: "User {{ username | default(esxi_cli_username) }} successfully deleted."
+    when: user_delete.rc == 0

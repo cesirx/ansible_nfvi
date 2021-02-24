@@ -1,0 +1,36 @@
+---
+- hosts: "{{ variable_host | default('lab_dev') }}"
+  connection: local
+  gather_facts: False
+
+  tasks:
+  - name: Manage iDRAC user
+    idrac_user:
+       idrac_ip: "{{ idrac_ip }}"
+       idrac_user: "{{ idrac_login_user }}"
+       idrac_password: "{{ idrac_login_password }}"
+       # 'state' variable could be passed as playbook argument. Valid values: [present, absent]
+       state: "{{ state | default('present') }}"
+       user_name: "{{ idrac_username }}"
+       user_password: "{{ idrac_password }}"
+       # 'privilege' variable could be passed as playbook argument. Valid values: [Administrator, ReadOnly, Operator, None]
+       privilege: "{{ privilege | default('ReadOnly') }}"
+       ipmi_lan_privilege: "User"
+       enable: "true"
+       protocol_enable: "true"
+       authentication_protocol: "MD5"
+       privacy_protocol: "DES"
+
+  ## Tasks to list users... but it is way too slow (too many shh connections required)
+  #- name: List users
+  #  command: sshpass -p {{ idrac_login_password }} ssh {{ idrac_login_user }}@{{ idrac_ip }} "racadm get iDRAC.Users.{{ item }}"
+  #  register: userlist
+  #  with_sequence: 1-16
+
+  #- debug:
+  #    msg: "{{ item.stdout | regex_search('UserName=(.*)', '\\1')}}"
+  #  when: item.stdout | regex_search('UserName=.*') |  length > 9
+  #  with_items: "{{ userlist.results }}"
+
+
+

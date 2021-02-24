@@ -1,0 +1,19 @@
+---
+    ## Disable IPMI Lan in iDRAC with idempotence
+
+    - hosts: "{{ variable_host | default('datacenter_a')}}"
+      connection: local
+      gather_facts: False
+      
+      #vars:
+      #    target_ilo_version: "{{ ilo_firmware_url | regex_search('_[0-9]+[.]bin$') | regex_replace('_([0-9]+)[.]bin', '\\1')}}"
+
+      tasks:
+
+      - name: Retrieve IPMI Lan status
+        command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm get iDRAC.IPMILan.Enable"
+        register: ipmilan_status
+
+      - name: Print current IPMI Lan status 
+        debug:
+          msg: "{{ ipmilan_status.stdout }}"

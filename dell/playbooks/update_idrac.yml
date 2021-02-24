@@ -1,0 +1,65 @@
+- hosts: lab_dev_r740
+  #connection: local
+  gather_facts: False
+
+  tasks: 
+ 
+  - name: "Extract target firmware version from image_uri"
+    set_fact:
+      target_firmware_version: "{{ idrac_firmware_image_uri | regex_search('_[0-9.]*_')| replace('_','') }}"
+
+  - name: "Print target firmware version from image_uri"
+    debug: 
+      var: target_firmware_version
+
+  - name: "Get System Inventory"
+    dellemc_get_system_inventory:
+      idrac_ip: "{{ idrac_ip }}"
+      idrac_user: "{{ idrac_user }}"
+      idrac_password: "{{ idrac_password }}"
+    register: output
+
+
+  - name: "Extract current firmware version from System Inventory"
+    set_fact:
+     # idrac_facts: "{{output.ansible_facts[idrac_ip].SystemInventory}}"
+      idrac_firmware: "{{output.ansible_facts[idrac_ip].SystemInventory[\"System\"] | map (attribute='LifecycleControllerVersion') | list | first}}"
+      host_model: "{{output.ansible_facts[idrac_ip].SystemInventory[\"System\"] | map (attribute='Model') | list | first}}"
+
+  - name: "iDRACs that will be updated"
+    debug: 
+      msg: 
+        - "Host model: {{host_model}}"
+        - "iDRAC will be updated from {{idrac_firmware}} to {{target_firmware_version}}"
+    when:  target_firmware_version not in idrac_firmware
+
+  - name: "iDRACs that will NOT be updated"
+    debug: 
+      msg: 
+        - "Host model: {{host_model}}"
+        - "iDRAC already in version {{idrac_firmware}}"
+    when:  target_firmware_version in idrac_firmware
+
+#   Print only iDRAC attributes from the idrac_fact variable
+#  - debug:
+#      var: idrac_facts["iDRAC"]
+
+  - name: "User confirmation"
+    pause:
+      prompt: 'If you are ok with the above changes press return to continue. Press Ctrl+c and then "a" to abort' 
+
+  - name: "Execute firmware update"
+    redfish_firmware:
+      baseuri: "{{ idrac_ip }}"
+      username: "{{ idrac_user }}"
+      password: "{{ idrac_password }}"
+      image_uri: "{{ idrac_firmware_image_uri }}"
+      transfer_protocol: "HTTP"
+    register: firmware_upgrade
+    when:  target_firmware_version not in idrac_firmware
+
+  - name: "Firmware upgrade results"
+    debug:
+      var: firmware_upgrade
+
+

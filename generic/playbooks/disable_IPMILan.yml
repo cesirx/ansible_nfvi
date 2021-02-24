@@ -1,0 +1,56 @@
+---
+    ## Print IPMI Lan
+
+    - hosts: "{{ variable_host | default('datacenter_a')}}"
+      connection: local
+      gather_facts: False
+      
+      tasks:
+      - block:
+          - name: Retrieve ILO IPMI Lan status
+            command: sshpass -p {{ilo_password}} ssh {{ilo_user}}@{{ilo_ip}} "show /map1/config1"
+            register: output
+    
+          - name: Extract ILO IPMI Lan status
+            set_fact:
+              ipmilan_status: "{{ output.stdout | regex_search('oemhp_ipmi_dcmi_overlan_enable=((yes|no))') | regex_replace('oemhp_ipmi_dcmi_overlan_enable=((yes|no))','\\1') | regex_replace('yes', 'Enabled') | regex_replace('no', 'Disabled') }}"
+        when: ilo_ip is defined
+
+      - block:
+          - name: Retrieve iDRAC IPMI Lan status
+            command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm get iDRAC.IPMILan.Enable"
+            register: output
+    
+          - name: Extract iDRAC IPMI Lan status
+            set_fact:
+              ipmilan_status: "{{ output.stdout | regex_search('Enable=(Disabled|Enabled)') | regex_replace('Enable=((Disabled|Enabled))','\\1') }}"
+        when: idrac_ip is defined
+
+      - name: Print overall IPMI Lan status 
+        debug:
+          msg: IPMI Lan status is {{ ipmilan_status }}
+
+      - name: "User confirmation"
+        pause:
+          prompt: 'Active IPMI LAN configurations will now be disabled in every host. Press return to continue. Press Ctrl+c and then "a" to abort' 
+
+      - block:
+        - name: Disabling IPMI Lan on iDRAC
+          command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm set iDRAC.IPMILan.Enable 0"
+          register: disable
+
+        - name: Print disable command output
+          debug:
+            msg: "{{ disable.stdout }}"
+        when: idrac_ip is defined and ipmilan_status=='Enabled'
+
+      - block:
+          - name: Disabling IPMI Lan on ILO
+            command: sshpass -p {{ilo_password}} ssh {{ilo_user}}@{{ilo_ip}} "set /map1/config1 oemhp_ipmi_dcmi_overlan_enable=no"
+            async: 15
+            poll: 0
+            register: disable
+
+          - debug:
+              msg: "ILO will now reboot"
+        when: ilo_ip is defined and ipmilan_status=='Enabled'

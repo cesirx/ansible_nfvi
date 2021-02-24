@@ -1,0 +1,28 @@
+---
+
+    - hosts: "{{ variable_host | default('datacenter_a')}}"
+      connection: local
+      gather_facts: False
+
+      vars:
+        privileges: "{{ priv | default('admin,config,oemhp_rc,oemhp_power,oemhp_vm') }}"
+
+      roles:
+        - role: list_ilo_users
+          tags: 
+            - always
+
+        - role: change_ilo_user_pass
+          tags:
+            - never
+            - change_ilo_user_pass
+
+        - role: create_ilo_users
+          tags:
+            - never
+            - create_ilo_users
+
+        - role: delete_ilo_users
+          tags:
+            - never
+            - delete_ilo_users

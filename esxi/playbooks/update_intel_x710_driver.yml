@@ -1,0 +1,45 @@
+---
+
+## This playbook deploys a new Intel X710 driver
+  # Execute precheck tasks
+    - hosts: "{{ variable_host | default('datacenter_a')}}"
+      gather_facts: False
+      roles:
+
+        - role: prechecks
+          tags: prechecks
+
+        - role: vib_install
+          vars:
+            object: 'intnetcli'
+            arg: 'install -v'
+            path: "{{ nfhsto_mountpoint }}{{ i40en_software_path }}{{ i40en_intnetcli_name }}"
+            target_version: "{{ path | regex_search('INT-ESX-intnetcli-[0-9]+.([0-9.]+)', '\\1') | list | first }}"
+            current_version: "{{ current_intnetcli_version }}"
+          #tags: intnetcli_install
+
+        - role: hostd_reboot
+          tags: hostd_reboot
+          when: (install_result is defined) and (install_result is changed)
+
+        - role: vib_install
+          vars:
+            object: 'i40en driver'
+            arg: 'update -d'
+            path: "{{ nfhsto_mountpoint }}{{ i40en_software_path }}{{ i40en_driver_name }}"
+            target_version: "{{ path | regex_search('VMW-ESX-[0-9.]+-i40en-([0-9.]+)', '\\1') | list | first }}"
+            current_version: "{{ current_driver_version }}"
+          #tags: driver_install
+
+        - role: esxi_reboot
+          when: (install_result is defined) and (install_result is changed)
+
+        - role: set_trust_vector
+          tags: set_trust_vector
+
+        - role: esxi_reboot
+          when: (trust_vector_cmd is defined) and (trust_vector_cmd is changed)
+
+        - role: postchecks
+          tags: postchecks
+

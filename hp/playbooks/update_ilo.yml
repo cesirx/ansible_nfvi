@@ -1,0 +1,56 @@
+---
+    ## Upgrade HP iLO firmware with idempotence
+
+    - hosts: "{{ variable_host | default('datacenter_a')}}"
+      connection: local
+      gather_facts: False
+      
+      vars:
+          target_ilo_version: "{{ ilo_firmware_url | regex_search('_[0-9]+[.]bin$') | regex_replace('_([0-9]+)[.]bin', '\\1')}}"
+
+      tasks:
+
+      - name: Retrieve iLO information
+        command: sshpass -p {{ilo_password}} ssh {{ilo_user}}@{{ilo_ip}} "show /map1/firmware1"
+        register: ilo_version
+
+      - name: Extract current iLO version
+        set_fact:
+          current_ilo_version: "{{ ilo_version.stdout | regex_search('version=[0-9.]+') | regex_replace('version=([0-9.]+)', '\\1')}}"
+
+      - name: Print current iLO version 
+        debug:
+          msg: Current iLO version {{current_ilo_version}}
+
+      #- name: Extract target iLO version
+      #  set_fact:
+      #    target_ilo_version: "{{ ilo_firmware_url | regex_search('_[0-9]+[.]bin$') | regex_replace('_([0-9]+)[.]bin', '\\1')}}"
+
+      - name: iLOs that will be updated
+        debug: 
+          msg: 
+          - "iLO will be updated from {{current_ilo_version}} to {{target_ilo_version}}"
+        when:  target_ilo_version not in current_ilo_version | regex_replace('[.]','')
+
+      - name: iLOs that will NOT be updated
+        debug:
+          msg:
+          - "iLO already in version {{current_ilo_version}}"
+        when:  target_ilo_version in current_ilo_version | regex_replace('[.]','')
+
+      - name: "User confirmation"
+        pause:
+          prompt: 'If you are ok with the above changes press return to continue. Press Ctrl+c and then "a" to abort' 
+
+      - name: Upgrade iLO firmware
+        block:
+          - name: Execute iLO upgrade
+            command: sshpass -p {{ilo_password}} ssh {{ilo_user}}@{{ilo_ip}} "load /map1/firmware1 -source {{ilo_firmware_url}}"
+            register: ilo_upgrade
+            #when:  target_ilo_version not in current_ilo_version | regex_replace('[.]','')
+
+          - name: iLO upgrade output 
+            debug:
+              msg: "{{ilo_upgrade.stdout}}"
+            #when:  target_ilo_version not in current_ilo_version | regex_replace('[.]','')
+        when:  target_ilo_version not in current_ilo_version | regex_replace('[.]','')

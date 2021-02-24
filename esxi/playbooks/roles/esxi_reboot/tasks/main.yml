@@ -1,0 +1,10 @@
+---
+
+  - name: Reboot ESXi (the playbook will continue once the host is back to life. Be patient...)
+    #shell: esxcli system shutdown reboot -r 'rebooting host'
+    reboot:
+    register: reboot
+
+  - name: Reboot time
+    debug:
+      msg: "Reboot took {{ reboot.elapsed }} seconds"

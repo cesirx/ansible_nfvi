@@ -1,0 +1,69 @@
+## Production hosts inventory for Ansible
+
+[production:children]
+datacenter_a
+datacenter_b
+
+
+[datacenter_a:children]
+datacenter_a_hp
+datacenter_a_dell
+
+[datacenter_b:children]
+datacenter_b_hp
+datacenter_b_dell
+
+[hp_all:children]
+datacenter_a_hp
+datacenter_b_hp
+
+[dell_all:children]
+datacenter_a_dell
+datacenter_b_dell
+
+[production_r740_all:children]
+datacenter_a_r740
+datacenter_b_r740
+
+
+##
+## datacenter_a
+##
+
+[datacenter_a_dell:children]
+datacenter_a_r740
+
+[datacenter_a_hp:children]
+datacenter_a_bl460c
+datacenter_a_bl660c
+
+[datacenter_a_bl660c]
+host1.datacenter_a   ilo_ip=host1_ipmi.datacenter_a
+host2.datacenter_a   ilo_ip=host2_ipmi.datacenter_a
+
+[datacenter_a_r740]
+host3.datacenter_a   idrac_ip=host3_ipmi.datacenter_a
+host4.datacenter_a   idrac_ip=host4_ipmi.datacenter_a
+
+[datacenter_a_bl460c]
+host5.datacenter_a  ilo_ip='192.168.1.5'
+host6.datacenter_a  ilo_ip='192.168.1.6'
+
+
+##
+## datacenter_b
+##
+
+[datacenter_b_dell:children]
+datacenter_b_r740
+
+[datacenter_b_hp:children]
+datacenter_b_bl660c
+
+[datacenter_b_bl660c]
+host1.datacenter_b   ilo_ip=host1_ipmi.datacenter_b
+host2.datacenter_b   ilo_ip=host2_ipmi.datacenter_b
+
+[datacenter_b_r740]
+host3.datacenter_b   idrac_ip=host3_ipmi.datacenter_b
+host4.datacenter_b   idrac_ip=host4_ipmi.datacenter_b

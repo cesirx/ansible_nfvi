@@ -1,0 +1,91 @@
+---
+
+  - hosts: "{{ hosts_var | default('lab_dev_r740') }}"
+    connection: local
+    gather_facts: False
+
+    tasks: 
+
+    - name: "Setup variables"
+      set_fact:
+         target_bios: "{{ bios_image_uri  | regex_search('_([0-9.]+[_0-9.]*)[.][A-Z]{3}$', '\\1') | list | first}}"
+         repository_path: "{{ bios_image_uri.rsplit('/', 1)[0] }}"
+         updatefile_name: "{{ bios_image_uri.split('/')[-1] }}"
+
+    #- name: "Print repo path"
+    #  debug:
+    #    msg: "{{ repository_path }}"
+
+    #- name: "Print BIOS file name"
+    #  debug:
+    #    msg: "{{ updatefile_name }}"
+
+    - name: "Print target BIOS version from image_uri"
+      debug: 
+        msg: "{{ target_bios }}"
+
+    - name: "Run getversion command from racadm"
+      command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm getversion -f bios"
+      register: bios_version
+
+
+    #- name: "Get System Inventory"
+    #  dellemc_get_system_inventory:
+    #    idrac_ip: "{{ idrac_ip }}"
+    #    idrac_user: "{{ idrac_user }}"
+    #    idrac_password: "{{ idrac_password }}"
+    #  register: output
+
+
+    - name: "Extract current BIOS version"
+      set_fact:
+        current_bios: "{{ bios_version.stdout | regex_search('[0-9.]*$') }}"
+
+    - name: "Print current BIOS version"
+      debug:
+        msg: "{{ current_bios  }}"
+
+    - name: "Get queue job IDs"
+      command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm jobqueue view"
+      register: job_queue
+
+    - name: "Extract BIOS upate scheduled job id"
+      set_fact:
+        scheduled_jobs: "{{ job_queue.stdout | regex_search('[[]Job ID=(JID_[0-9]+)[]]\nJob Name=Firmware Update: BIOS\nStatus=Scheduled', '\\1') }}"
+
+    #- name: "Print BIOS update scheduled job id"
+    #  debug:
+    #    msg: "{{ scheduled_jobs }}"
+
+    - name: "BIOS that will be updated"
+      debug: 
+        msg: "BIOS will be updated from {{ current_bios }} to {{ target_bios }}"
+      when:  current_bios not in target_bios
+
+    - name: "BIOS already in target version that will NOT be updated"
+      debug: 
+        msg: "BIOS already in version {{ current_bios }}"
+      when:  current_bios in target_bios
+
+    - name: "BIOS updates already scheduled that will NOT be updated"
+      debug:
+        msg: "BIOS update already scheduled ({{ scheduled_jobs }}). Host reboot required"
+      when:  scheduled_jobs | length > 0
+
+    - name: "User confirmation"
+      pause:
+        prompt: 'If you are ok with the above changes press return to continue. Press Ctrl+c and then "a" to abort' 
+      
+    - name: "Upgrade BIOS version from racadm"
+      block:
+        - name: "Execute BIOS upgrade"
+          command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm update -f {{ updatefile_name }} -l {{ repository_path }}"
+          register: bios_upgrade
+          #when:  (current_bios not in target_bios) and (scheduled_jobs | length == 0)
+
+        - name: "Print update output"
+          debug:
+            msg: "{{ bios_upgrade  }}"
+      when:  (current_bios not in target_bios) and (scheduled_jobs | length == 0)
+
+

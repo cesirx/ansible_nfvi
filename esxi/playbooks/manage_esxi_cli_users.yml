@@ -1,0 +1,24 @@
+---
+
+    - hosts: "{{ variable_host | default('datacenter_a')}}"
+      gather_facts: False
+      roles:
+
+        - role: list_esxi_cli_users
+          tags: 
+            - always
+
+        - role: change_esxi_cli_user_pass
+          tags:
+            - never
+            - change_esxi_cli_user_pass
+
+        - role: create_esxi_cli_user
+          tags:
+            - never
+            - create_esxi_cli_user
+
+        - role: delete_esxi_cli_user
+          tags:
+            - never
+            - delete_esxi_cli_user

@@ -1,0 +1,10 @@
+---
+
+  - name: Generic question with multiple different responses
+    command: esxcli system account set -i {{ username | default(esxi_cli_username) }} -p {{ esxi_cli_password}} -c {{ esxi_cli_password}}
+    register: change_ouput
+
+  - name: Print success password change ouput
+    debug:
+      msg: "User {{ username | default(esxi_cli_username) }} password successfully deleted."
+    when: change_ouput.rc == 0

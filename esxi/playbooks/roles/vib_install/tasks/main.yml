@@ -1,0 +1,22 @@
+---
+
+  - name: "User confirmation"
+    pause:
+      prompt: 'If you are ok with the above changes press return to continue. Press Ctrl+c and then "a" to abort' 
+
+  - name: Install/upgrade {{ object }}
+    block:
+
+    - name: Print {{ object }} upgrade info
+      debug:
+        msg: "Upgrading {{ object }} from version {{ current_version }} to {{ target_version }}"
+
+    - name: Install {{ object }} VIB
+      shell: esxcli software vib {{ arg }} "{{ path }}"
+      register: install_result
+
+    - name: Print {{ object }} install_result
+      debug:
+        msg: "{{ install_result.stdout }}"  
+  
+    when: target_version is version(current_version, '>')

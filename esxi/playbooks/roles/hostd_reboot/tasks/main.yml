@@ -1,0 +1,9 @@
+---
+
+  - name: Reboot hostd service
+    shell: /etc/init.d/hostd restart
+    register: reboot_srv
+
+  - name: Reboot hostd output
+    debug:
+      msg: "{{ reboot_srv.stdout }}"

@@ -1,0 +1,62 @@
+---
+  ## Prechecks playbook
+    
+  - name: Get intnetcli VIB version
+    block:
+      - name: Run esxcli command to get intnetcli VIB version
+        shell: esxcli software vib list | grep intnet
+        register: vib_version_output 
+
+      - name: Extract ancillary VIB version
+        set_fact:
+          current_intnetcli_version: "{{ vib_version_output.stdout | regex_search('int-esx-intnetcli[ ]+[0-9]+.([0-9.]+)', '\\1') | list | first }}"
+
+  - name: Get driver and firmware version
+    block:
+      - name: Find a vmnic using i40en driver
+        shell: esxcli network nic list | grep i40en | awk 'NR==1{print $1}'
+        register: i40en_vmnic
+
+      - name: Run esxcli command to get driver and firmware versions
+        shell: esxcli network nic get -n {{ i40en_vmnic.stdout }}
+        register: i40en_version_output
+
+      - name: Extract driver and firmware version
+        set_fact:
+          current_driver_version: "{{ i40en_version_output.stdout | regex_search('  Version: ([0-9.]+)', '\\1') | list | first }}"
+          current_firmware_version: "{{ i40en_version_output.stdout | regex_search('  Firmware.*: .* [0x]+.* ([0-9.]+)', '\\1') | list | first }}"
+
+  #- name: Get SRIOV vector
+  #  block:
+  #    - name: Run esxcli command to get SRIOV vector
+  #      shell: esxcfg-module -g i40en
+  #      register: sriov_vector_output
+
+
+  - name: Get module vectors
+    block:
+      - name: Run esxcli command to get trusted vector
+        shell: esxcli system module parameters list -m i40en
+        register: vector_output
+      
+      - name: Extract sriov vector
+        set_fact:
+          sriov_vector: "{{ vector_output.stdout | regex_search('max_vfs[ ]+array of int[ ]+([0-9,]+)', '\\1') | list | first }}"
+
+      - name: Extract trusted vector
+        set_fact:
+          current_trusted_vector: "{{ vector_output.stdout | regex_search('trust_all_vfs[ ]+array of int[ ]+([0-9,]+)', '\\1') | list | first }}"
+
+    rescue:
+      - name: Trusted vector does not exist
+        set_fact:
+          current_trusted_vector: ''
+
+  - name: Print i40en module versions
+    debug:
+      msg:
+        - "intnetcli VIB version: {{ current_intnetcli_version }}"
+        - "Driver version: {{ current_driver_version }}"
+        - "Firmware version: {{ current_firmware_version }}" 
+        - "SRIOV vector: {{ sriov_vector }}"
+        - "Trusted vector: {{ current_trusted_vector }}"

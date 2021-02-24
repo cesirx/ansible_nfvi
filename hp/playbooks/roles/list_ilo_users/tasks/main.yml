@@ -1,0 +1,11 @@
+---
+
+  - name: Get iLO users
+    command: sshpass -p {{ilo_login_password}} ssh {{ilo_login_user}}@{{ilo_ip}} "show -a /map1/accounts1 "
+    register: user_list
+
+  - name: Print user list
+    debug:
+      msg: "{{ user_list.stdout | regex_findall('username=.*|group=.*') | list }}"
+
+      

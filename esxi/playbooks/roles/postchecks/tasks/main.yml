@@ -1,0 +1,5 @@
+---
+
+  - name: Get final i40en driver and firmware versions
+    include_role:
+      name: get_i40en_version

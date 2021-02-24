@@ -1,0 +1,9 @@
+---
+
+  - name: Delete iLO users
+    command: sshpass -p {{ilo_login_password}} ssh {{ilo_login_user}}@{{ilo_ip}} "delete /map1/accounts1/{{ ilo_username }}"
+    register: user_removal
+
+  - name: Print output
+    debug:
+      msg: "{{ user_removal.stdout }}"

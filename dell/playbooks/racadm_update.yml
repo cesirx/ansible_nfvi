@@ -1,0 +1,9 @@
+---
+  - name: "Execute upgrade via racadm"
+    command: sshpass -p {{ idrac_password }} ssh {{ idrac_user }}@{{ idrac_ip }} "racadm update -f {{ updatefile_name }} -l {{ repository_path }}"
+    register: racadm_upgrade
+    #when:  (current_bios not in target_bios) and (scheduled_jobs | length == 0)
+
+  - name: "Print upgrade process output"
+    debug:
+      msg: "{{ racadm_upgrade.stdout  }}"

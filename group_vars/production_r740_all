@@ -1,0 +1,2 @@
+idrac_firmware_image_uri: http://x.x.x.x/dell/r740/iDRAC-with-Lifecycle-Controller_Firmware_9F2TG_WN64_4.22.00.00_A00.EXE
+bios_image_uri: http://x.x.x.x/dell/r740/BIOS_HC85T_LN_2.8.2_02.BIN

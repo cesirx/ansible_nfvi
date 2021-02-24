@@ -1,0 +1,7 @@
+---
+idrac_user: 'x'
+idrac_password: 'xx'
+ilo_user: 'y'
+ilo_password: 'yy'
+ansible_user: 'z'
+ansible_ssh_pass: 'zz'
